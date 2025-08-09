@@ -1,14 +1,13 @@
-# AWS NZ Instructions
 
-# AWS MediaConvert Setup Guide
+# AWS MediaConvert, MediaTailor, and MediaLive Setup Guide
 
-This guide explains how to set up **AWS MediaConvert** with proper IAM permissions and prerequisites.
+This guide explains how to set up **AWS MediaConvert**, **AWS MediaTailor**, and **AWS MediaLive** with proper IAM permissions and prerequisites.
 
 ---
 
 ## 📋 Prerequisites
 
-Before running any MediaConvert jobs, you must:
+Before running any MediaConvert, MediaTailor, or MediaLive jobs, you must:
 
 1. **Have an AWS account**
    - Sign up at [https://aws.amazon.com](https://aws.amazon.com)
@@ -17,18 +16,18 @@ Before running any MediaConvert jobs, you must:
    - `AmazonS3FullAccess`
    - `AWSElementalMediaConvertFullAccess`
    - `AWSElementalMediaTailorFullAccess`
+   - `AWSElementalMediaLiveFullAccess`
 
-3. **Configure AWS CLI**
+3. **Configure AWS CLI** (optional if you only use the console)
    ```bash
    aws configure --profile myprofile
    ```
-   Provide your **Access Key ID**, **Secret Access Key**, default region (e.g., `us-east-1`), and output format (`json` recommended).
 
 4. **Create an S3 Bucket**
    - This bucket will store both your input and output files.
    - Example:
      ```
-     s3://my-mediaconvert-bucket/
+     s3://my-media-bucket/
      ```
 
 ---
@@ -37,9 +36,7 @@ Before running any MediaConvert jobs, you must:
 
 MediaConvert needs a **role** it can assume to access your S3 bucket.
 
-### 1. **Trust Policy**
-When creating the role, set the **Trusted Entities** to:
-
+**Trust Policy:**
 ```json
 {
   "Version": "2012-10-17",
@@ -56,66 +53,33 @@ When creating the role, set the **Trusted Entities** to:
 }
 ```
 
-This allows MediaConvert to **assume the role**.
-
----
-
-### 2. **Attach Permissions Policy**
 Attach the AWS managed policy:
-
 ```
 AmazonS3FullAccess
 ```
-
-This grants MediaConvert permission to **read** and **write** to S3.
 
 ---
 
 ## 📡 Find Your MediaConvert Endpoint
 
-Before creating a job, you must know your **account-specific endpoint**.
-
+From AWS CLI:
 ```bash
-aws mediaconvert describe-endpoints \
-  --region us-east-1 \
-  --profile myprofile
+aws mediaconvert describe-endpoints --region us-east-1 --profile myprofile
 ```
 
-Output example:
-```json
-{
-  "Endpoints": [
-    {
-      "Url": "https://abcd1234.mediaconvert.us-east-1.amazonaws.com"
-    }
-  ]
-}
-```
-
-Use this URL in your MediaConvert job commands.
+From AWS Console:
+1. Open **AWS MediaConvert**.
+2. Click **Endpoints** in the left menu.
+3. Copy your account-specific endpoint.
 
 ---
 
-## ▶️ Running a Job
-
-Example MediaConvert job command:
-
+## ▶️ Running a Job (CLI Example)
 ```bash
-aws mediaconvert create-job \
-  --region us-east-1 \
-  --profile myprofile \
-  --endpoint-url https://abcd1234.mediaconvert.us-east-1.amazonaws.com \
-  --role arn:aws:iam::<ACCOUNT_ID>:role/MediaConvert_Default_Role \
-  --settings file://job.json
+aws mediaconvert create-job   --region us-east-1   --profile myprofile   --endpoint-url https://abcd1234.mediaconvert.us-east-1.amazonaws.com   --role arn:aws:iam::<ACCOUNT_ID>:role/MediaConvert_Default_Role   --settings file://job.json
 ```
 
-Where:
-- `file://job.json` is your job configuration file.
-- `--role` is the ARN of the IAM role you created for MediaConvert.
-
----
-
-## 📂 Example `job.json`
+Example `job.json`:
 ```json
 {
   "TimecodeConfig": { "Source": "ZEROBASED" },
@@ -126,7 +90,7 @@ Where:
         "Type": "HLS_GROUP_SETTINGS",
         "HlsGroupSettings": {
           "SegmentLength": 2,
-          "Destination": "s3://my-mediaconvert-bucket/output/playlist"
+          "Destination": "s3://my-media-bucket/output/playlist"
         }
       },
       "Outputs": [
@@ -152,7 +116,7 @@ Where:
   ],
   "Inputs": [
     {
-      "FileInput": "s3://my-mediaconvert-bucket/input/video.mp4",
+      "FileInput": "s3://my-media-bucket/input/video.mp4",
       "AudioSelectors": {
         "Audio Selector 1": { "DefaultSelection": "DEFAULT" }
       }
@@ -163,16 +127,163 @@ Where:
 
 ---
 
-## ✅ Summary
+## 🎯 AWS MediaTailor (Console Setup)
 
-- Create an IAM user with **full access** to S3, MediaConvert, and MediaTailor.
-- Create an S3 bucket for inputs and outputs.
-- Create an IAM role with a trust policy for **mediaconvert.amazonaws.com** and `AmazonS3FullAccess` permissions.
-- Get your MediaConvert endpoint with `aws mediaconvert describe-endpoints`.
-- Run jobs with `aws mediaconvert create-job` using your endpoint and role.
+### Create a VOD Source
+1. Open **AWS MediaTailor** in the console.
+2. Go to **VOD Sources** → **Create VOD Source**.
+3. Name your source (e.g., `MyVODSource`).
+4. Select **Source Location** and choose your S3 bucket containing the HLS playlist.
+5. Click **Create**.
+
+### Create a Basic Channel
+1. Go to **Channels** → **Create Channel**.
+2. Choose **Basic** type.
+3. Set **Default Slate** to your preferred placeholder video.
+4. Link the VOD source to the channel.
+5. Click **Create**.
+
+### Public Access Policy
+1. In **Source Locations**, select your source location.
+2. Add a **public policy** to allow access from any viewer.
+3. Save changes.
+
+---
+
+## 📡 AWS MediaLive (Console Setup)
+
+### Create IAM Role `MediaLiveAccessRole`
+Trust Policy:
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "medialive.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+```
+
+Permissions Policy:
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:ListBucket",
+                "s3:PutObject",
+                "s3:GetObject",
+                "s3:DeleteObject"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "mediastore:ListContainers",
+                "mediastore:PutObject",
+                "mediastore:GetObject",
+                "mediastore:DeleteObject",
+                "mediastore:DescribeObject"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents",
+                "logs:DescribeLogStreams",
+                "logs:DescribeLogGroups"
+            ],
+            "Resource": "arn:aws:logs:*:*:*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "mediaconnect:ManagedDescribeFlow",
+                "mediaconnect:ManagedAddOutput",
+                "mediaconnect:ManagedRemoveOutput"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ec2:describeSubnets",
+                "ec2:describeNetworkInterfaces",
+                "ec2:createNetworkInterface",
+                "ec2:createNetworkInterfacePermission",
+                "ec2:deleteNetworkInterface",
+                "ec2:deleteNetworkInterfacePermission",
+                "ec2:describeSecurityGroups",
+                "ec2:describeAddresses",
+                "ec2:associateAddress"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "mediapackage:DescribeChannel"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "mediapackagev2:PutObject",
+                "mediapackagev2:GetChannel"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "kms:GenerateDataKey"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "secretsmanager:GetSecretValue"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+```
+Also attach `AmazonSSMReadOnlyAccess` managed policy.
+
+### Create an Input (S3-based)
+1. Open **AWS MediaLive** in the console.
+2. Go to **Inputs** → **Create Input**.
+3. Choose **MP4 or TS File** as input type.
+4. Select **S3** as the source.
+5. Provide the S3 bucket path to your media.
+6. Choose `MediaLiveAccessRole` as the IAM role.
+7. Save.
+
+### Create a Channel using Custom Template (S3)
+1. Go to **Channels** → **Create Channel**.
+2. Select **Custom** template.
+3. Choose **S3** input created earlier.
+4. Set output groups (e.g., HLS output to S3).
+5. Assign `MediaLiveAccessRole` as the channel role.
+6. Review and create.
 
 ---
 
 ## 📚 AWS Documentation
-- [AWS MediaConvert Documentation](https://docs.aws.amazon.com/mediaconvert/latest/ug/what-is.html)
-- [AWS CLI MediaConvert Commands](https://docs.aws.amazon.com/cli/latest/reference/mediaconvert/index.html)
+- [AWS MediaConvert](https://docs.aws.amazon.com/mediaconvert/latest/ug/what-is.html)
+- [AWS MediaTailor](https://docs.aws.amazon.com/mediatailor/latest/ug/what-is.html)
+- [AWS MediaLive](https://docs.aws.amazon.com/medialive/latest/ug/what-is.html)
