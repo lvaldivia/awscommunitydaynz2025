@@ -1,0 +1,65 @@
+{
+  "TimecodeConfig": { "Source": "ZEROBASED" },
+  "OutputGroups": [
+    {
+      "CustomName": "HLS",
+      "Name": "Apple HLS",
+      "Outputs": [
+        {
+          "ContainerSettings": { "Container": "M3U8", "M3u8Settings": {} },
+          "VideoDescription": {
+            "Width": 1920,
+            "Height": 1080,
+            "CodecSettings": {
+              "Codec": "H_264",
+              "H264Settings": {
+                "MaxBitrate": 10000000,
+                "RateControlMode": "QVBR",
+                "SceneChangeDetect": "DISABLED",
+                "QualityTuningLevel": "SINGLE_PASS",
+                "GopSize": 2,
+                "GopSizeUnits": "SECONDS",
+                "GopClosedCadence": 1
+              }
+            }
+          },
+          "AudioDescriptions": [
+          {
+            "AudioSourceName": "Audio Selector 1",
+            "CodecSettings": {
+              "Codec": "AAC",
+              "AacSettings": {
+                "Bitrate": 192000,
+                "CodingMode": "CODING_MODE_2_0",
+                "SampleRate": 48000
+              }
+            }
+          }
+        ],
+          "OutputSettings": { "HlsSettings": {} },
+          "NameModifier": "_1080"
+        }
+      ],
+      "OutputGroupSettings": {
+        "Type": "HLS_GROUP_SETTINGS",
+        "HlsGroupSettings": {
+          "SegmentLength": 2,
+          "MinSegmentLength": 2,
+          "MinFinalSegmentLength": 2,
+          "ProgramDateTime": "INCLUDE",
+          "ProgramDateTimePeriod": 2,
+          "Destination": "s3://demoslvaldivia/convert/sololeveling/playlist",
+          "ManifestDurationFormat": "FLOATING_POINT"
+        }
+      }
+    }
+  ],
+  "Inputs": [
+    {
+      "AudioSelectors": { "Audio Selector 1": { "DefaultSelection": "DEFAULT" } },
+      "VideoSelector": {},
+      "TimecodeSource": "ZEROBASED",
+      "FileInput": "s3://demoslvaldivia/videos/sololeveling.mp4"
+    }
+  ]
+}
