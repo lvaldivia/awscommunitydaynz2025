@@ -48,7 +48,7 @@
           "MinFinalSegmentLength": 2,
           "ProgramDateTime": "INCLUDE",
           "ProgramDateTimePeriod": 2,
-          "Destination": "s3://demoslvaldivia/convert/sololeveling/playlist",
+          "Destination": "s3://youbucket/convert/sololeveling/playlist",
           "ManifestDurationFormat": "FLOATING_POINT"
         }
       }
@@ -59,7 +59,7 @@
       "AudioSelectors": { "Audio Selector 1": { "DefaultSelection": "DEFAULT" } },
       "VideoSelector": {},
       "TimecodeSource": "ZEROBASED",
-      "FileInput": "s3://demoslvaldivia/videos/sololeveling.mp4"
+      "FileInput": "s3://youbucket/videos/sololeveling.mp4"
     }
   ]
 }
